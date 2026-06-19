@@ -1,39 +1,39 @@
 from src.carregar_dados import carregar_dados
-from src.preprocessar import (
+from src.pre_processamento import (
     limpar_e_mapear,
     separar_e_dividir,
     fit_ohe,
     montar_matriz
 )
 from src.balancear import balancear
-from src.treinar import treinar_rf, salvar_modelo
-from src.avaliar import avaliar
-
+from src.treinamento_rf import treinar_rf
+from src.salvar_modelo import salvar_modelo
+from src.avaliacao import avaliador
 
 if __name__ == '__main__':
     dados = carregar_dados()
 
-    # limpeza e mapeamento de binárias
+    # limpeza global + mapeamento de binárias/ordinais (pré-split)
     dados = limpar_e_mapear(dados)
 
-    # separar X/y e split (stratify)
+    # separar X/y e split com stratify
     X_train, X_test, y_train, y_test = separar_e_dividir(dados)
 
-    # etapa 4 - fit do OHE so no treino
+    # fit do OHE só no treino
     ohe = fit_ohe(X_train)
 
-    # etapa 4 e 5 - transform + montagem com np.hstack
+    # transform + montagem com np.hstack
     X_train = montar_matriz(X_train, ohe)
     X_test = montar_matriz(X_test, ohe)
 
-    # etapa 6 - SMOTE so no treino
+    # SMOTE só no treino
     X_train, y_train = balancear(X_train, y_train)
 
-    # etapa 7 - RandomizedSearchCV + treino da RF
+    # RandomizedSearchCV + treino da RF
     modelo = treinar_rf(X_train, y_train)
 
-    # etapa 8 - avaliacao
-    avaliar(modelo, X_test, y_test)
+    # avaliação
+    avaliador(modelo, X_test, y_test, nome_modelo='classificador_rf')
 
-    # salvar o modelo
-    salvar_modelo(modelo, ohe)
+    # salvar o encoder
+    salvar_modelo(ohe, 'OHE_Encoder')
