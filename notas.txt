@@ -1,0 +1,56 @@
+Etapas da classificação em ordem:
+1. Limpeza Global (Pré-Split): Dropar a coluna duration (Data Leakage) e tratar os valores -1 da coluna pdays (ex: criar flag binária).
+2. Mapeamento Direto (Pré-Split): Converter o target y, as binárias (default, housing, loan) e as ordinais (education, month) para números.
+3. Train-Test Split: Separar features (X) do alvo (y) e dividir os dados (test_size=0.3, stratify=y para manter a proporção das classes).
+4. One-Hot Encoding (OHE): Fazer o fit apenas no X_train (para aprender as categorias, incluindo unknown) e aplicar o transform no X_train e X_test.
+5. Montagem Manual: Fatiar as colunas originais e empilhar as matrizes lado a lado usando np.hstack (numéricas puras + binárias mapeadas + array do OHE).
+6. Balanceamento (SMOTE): Aplicar a geração de dados sintéticos estritamente no X_train / y_train (nunca no teste).
+7. Otimização e Treino: Configurar a grade do RandomizedSearchCV (ex: n_estimators, max_depth) e ajustar (fit) o Random Forest nos dados balanceados.
+8. Avaliação Robusta: Medir Acurácia, mas focar em Recall (Sensibilidade), Especificidade e ROC-AUC usando o X_test / y_test original.
+9. Serialização (Deploy): Salvar os objetos instanciados (tanto o modelo RF treinado quanto o OneHotEncoder fittado) usando joblib ou pickle.
+10. Inferência (Produção): Carregar modelo e encoder, receber dados novos, reproduzir exatamente as etapas 1, 2, 4 e 5, e gerar a predição.
+
+Descritivo das colunas:
+    - age: idade do cliente, contínua, range(19:87)
+    - job: profissão, categórica (12 opções)
+    - marital: estado civil, categórica ('married', 'single', 'divorced')
+    - education: escolaridade, categórica ordinal ('primary', 'secondary', 'tertiary')
+    - default: inadimplência no momento, categórica binária ('no', 'yes')
+    - balance: saldo bancário, numérica contínua (valores negativos)
+    - housing: tem empréstimo imobiliário? categórica binária ('no', 'yes')
+    - loan: tem empréstimo pessoal?  categórica binária ('no', 'yes')
+    - contact: canal de contato, categórica ('cellular', 'telephone')
+    - day: dia do mês do último contato, numérica clínica, range(1:31)
+    - month: mês do último contato, categórica (12 opções)
+    - duration: duração da chamada, dropar - causa dataleakage
+    - campaign: qtd de ligações feitas ao cliente nesta campanha, numérica contínua range(1:50), outliers extremos
+    - pdays: dias desde o último contato de uma campanha anterior, numérica contínua (número negativo '-1' para "nunca contatado")
+    - previous: ligações feitas antes da campanha, numérica contínua range(0:25)
+    - poutcome: resultado da campanha anterior, categórica ('failure', 'success', 'other')
+    - y: assinou o depósito a prazo? TARGET, categórica binária ('no', 'yes') -> vai para 0/1
+
+Precisa de tratamento:
+    - duration: dropar;
+    - pdays: tratar valor '-1';
+    - y: mapear para 0/1 - TARGET;
+    - job: tratar unknown e aplicar OHE;
+    - education: tratar unknown e mapear ORDINAL;
+    - contact: tratar unknown e aplicar OHE;
+    - poutcome: tratar unknown, aplicar OHE;
+    - default: mapear yes/no para 1/0
+    - housing: mapear yes/no para 1/0
+    - loan: mapear yes/no para 1/0
+    - marital: aplicar OHE
+    - month: mapear números (1:12)
+
+Não precisa de tratamento:
+    - age: numérica contínua;
+    - balance: numérica contínua;
+    - campaign: numérica contínua;
+    - previous: numérica contínua;
+    - day: numérica cíclica.
+
+PROMPT PARA O CARA LARANJADO:
+```
+Documentação do Projeto: Classificação - Bank MarketingObjetivo: Desenvolver um modelo preditivo (Random Forest) para classificar se um cliente assinará um depósito a prazo (y), utilizando tratamento manual de dados (sem ColumnTransformer) para fins de fixação de conceitos de pré-processamento.⚙️ 1. Pipeline de Execução (Passo a Passo)Limpeza Global (Pré-Split): Dropar a coluna duration (previne Data Leakage) e tratar os valores -1 da coluna pdays (ex: criar flag binária de contato prévio).Mapeamento Direto (Pré-Split): Converter o target y, as variáveis binárias (default, housing, loan) e as ordinais (education, month) para formato numérico.Train-Test Split: Separar features (X) do alvo (y) e dividir os dados (test_size=0.3, stratify=y para manter a proporção das classes).One-Hot Encoding (OHE): Fazer o fit apenas no X_train (para aprender as categorias, incluindo unknown) e aplicar o transform no X_train e no X_test.Montagem Manual: Fatiar as colunas originais e empilhar as matrizes horizontalmente usando np.hstack (Numéricas Puras + Binárias/Ordinais Mapeadas + Array do OHE).Balanceamento (SMOTE): Aplicar geração de dados sintéticos estritamente no X_train / y_train (nunca no teste).Otimização e Treino: Configurar a grade de hiperparâmetros no RandomizedSearchCV (ex: n_estimators, max_depth) e ajustar (fit) o Random Forest nos dados balanceados.Avaliação Robusta: Medir Acurácia, priorizando métricas de negócio: Recall (Sensibilidade), Especificidade e ROC-AUC usando os dados puros do X_test / y_test.Serialização (Deploy): Salvar os objetos instanciados (Modelo RF treinado + OneHotEncoder fittado) em arquivos usando joblib ou pickle.Inferência (Produção): Carregar modelo e encoder, receber novos dados brutos, reproduzir exatamente as etapas 1, 2, 4 e 5, e gerar a predição final.📊 2. Dicionário de Dados e Estratégia de Tratamento🔴 Target (Variável Alvo)y: Assinou o depósito a prazo? Categórica binária ('no', 'yes'). Tratamento: Mapear para 0/1.🛠️ Features que Exigem Tratamento / TransformaçãoColunaDescriçãoTratamento ExigidodurationDuração da chamada.Dropar (Causa Data Leakage).pdaysDias desde o último contato anterior.Tratar o valor -1 (Nunca contatado). Transformar em flag ou agrupar.defaultInadimplência ('no', 'yes').Mapeamento Binário: 0/1.housingEmpréstimo imobiliário ('no', 'yes').Mapeamento Binário: 0/1.loanEmpréstimo pessoal ('no', 'yes').Mapeamento Binário: 0/1.educationEscolaridade ('primary' a 'tertiary').Mapeamento Ordinal (Tratar unknown).monthMês do contato (12 opções).Mapeamento Numérico (1 a 12).jobProfissão (12 opções).One-Hot Encoding (Tratar unknown).maritalEstado civil (3 opções).One-Hot Encoding.contactCanal de contato ('cellular', 'telephone').One-Hot Encoding (Tratar unknown).poutcomeResultado campanha anterior.One-Hot Encoding (Tratar unknown).✅ Features Prontas (Não exigem tratamento além de empilhamento/scaling)ColunaDescriçãoTipo de Dado (Range)ageIdade do cliente.Numérica contínua (19:87)balanceSaldo bancário.Numérica contínua (Permite negativos)campaignContatos nesta campanha.Numérica contínua (1:50) - Contém outlierspreviousContatos antes desta campanha.Numérica contínua (0:25)dayDia do mês do contato.Numérica cíclica (1:31)
+```
